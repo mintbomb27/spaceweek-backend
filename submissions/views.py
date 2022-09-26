@@ -158,7 +158,7 @@ class ParticipantsView(generics.GenericAPIView):
             # Already registered count
             if(participants_for_events+len(participants) >= event.max_per_school):# check if max reached
                 delete = default_storage.delete(dirr)
-                raise Exception(400, f"You may only add {event.max_per_school-participants_for_events} more participants for the event. Requested to add {participants_for_events}.")
+                raise Exception(400, f"You may only add {event.max_per_school-participants_for_events} more participants for the event. Requested to add {len(participants)}.")
             Participant.objects.bulk_create(participants)#ignore_conflicts
             delete = default_storage.delete(dirr)
             return GenericResponse("registered participants", "Success")
