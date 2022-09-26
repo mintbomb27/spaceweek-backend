@@ -2,7 +2,6 @@ from userauth.models import User
 from django.db import models
 from django.contrib.postgres.fields import ArrayField 
 
-
 # class Result(models.Model):
 #   result_id = models.CharField(max_length = 5 ,primary_key= True)
 #   position_1 = models.ForeignKey(Participant,on_delete=models.CASCADE)
@@ -15,7 +14,10 @@ class Event(models.Model):
     description = models.TextField(null=True)
     guidelines = models.TextField()
     #result = models.ForeignKey(Result, on_delete= models.CASCADE)
-    eligibility = models.CharField(max_length=100)
+    eligibility = ArrayField(
+            models.CharField(max_length=10, choices=[("1","1"), ("2","2"), ("3","3"), ("4","4"), ("5","5"), ("6","6"), ("7","7"), ("8","8"), ("9","9"), ("10","10"), ("11","11"), ("12","12"), ("College","College"),]),
+            size=13
+        )
     date = models.DateField()
     time = models.TimeField()
     max_per_school = models.IntegerField(default=5)

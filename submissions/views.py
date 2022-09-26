@@ -27,6 +27,18 @@ class AllEventsView(generics.ListAPIView):
         response = super().list(self, request, *args, **kwargs)
         return GenericResponse("success",response.data)
 
+class EventView(generics.ListAPIView):
+    serializer_class = EventSerializer
+    permission_classes = [IsAuthenticated]
+    queryset = Event.objects.all()
+
+    def get(self, request, *args, **kwargs):
+        id = request.GET.get('id', None)
+        if(id is None):
+            raise Exception(400, 'id not passed')
+        event = Event.objects.get(id=id)
+        return GenericResponse("success", EventSerializer(event).data)
+
 class CreateEventView(generics.CreateAPIView):
     serializer_class = EventSerializer
     permission_classes = [IsAdminUser]
@@ -34,6 +46,35 @@ class CreateEventView(generics.CreateAPIView):
     def post(self, request, *args, **kwargs):
         response = super().create(request, *args, **kwargs)
         return GenericResponse("success",response.data)
+
+class RegisterForEventView(generics.CreateAPIView):
+    serializer_class = ParticipantSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request, *args, **kwargs):
+        data = self.get_serializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        name=data.validated_data.get('name', None)
+        gender=data.validated_data.get('gender', None)
+        standard = data.validated_data.get('standard', None)
+        event_id = request.data.get('event_id', None)
+        if(event_id is None):
+            raise Exception(400, 'event id not provided')
+        event = Event.objects.get(id=event_id)
+        if event.deadline: # Check Deadline
+            if timezone.now() > event.deadline:
+                raise Exception(422, "deadline passed for submission.")
+        school = School.objects.get(poc=request.user)
+        participants_for_events = Participant.objects.filter(event=event,school=school).count()
+        if(participants_for_events >= event.max_per_school):
+            raise Exception(400, "maximum participants for events reached")
+        if event.deadline: # Check Deadline
+            if timezone.now() > event.deadline:
+                raise Exception(422, "deadline passed for submission.")
+        participant = Participant(name=data.validated_data.get('name'),standard=data.validated_data.get('standard'), gender=data.validated_data.get('gender'), school=school, event=event)
+        participant.save()
+        return GenericResponse('Registered Student', ParticipantSerializer(participant).data)
+
 
 # class CreateSubmissionView(generics.GenericAPIView):
 #     serializer_class = SubmissionSerializer
@@ -58,9 +99,9 @@ class CreateEventView(generics.CreateAPIView):
 #         print(request.POST)
 #         event = Event.objects.get(id=request.data['event_id'])
 #         print('hellooo')
-#         if event.deadline: # Check Deadline
-#             if timezone.now() > event.deadline:
-#                 raise Exception(422, "deadline passed for submission.")
+        if event.deadline: # Check Deadline
+            if timezone.now() > event.deadline:
+                raise Exception(422, "deadline passed for submission.")
 #         if event.file_submission: # File Submission
 #             file = request.FILES.get('file', None)
 #             print(file)
