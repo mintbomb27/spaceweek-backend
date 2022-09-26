@@ -36,7 +36,7 @@ class School(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     
 class Participant(models.Model):
-    id = models.CharField(max_length= 10 ,primary_key=True)
+    id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=128)
     standard = models.CharField(max_length=10, choices=[("1","1"), ("2","2"), ("3","3"), ("4","4"), ("5","5"), ("6","6"), ("7","7"), ("8","8"), ("9","9"), ("10","10"), ("11","11"), ("12","12"), ("College","College"),])
     gender = models.CharField(max_length=10, choices=[("Male", "Male"), ("Female", "Female"), ("Other", "Other")])

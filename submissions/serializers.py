@@ -10,7 +10,7 @@ class EventSerializer(serializers.ModelSerializer):
 class ParticipantSerializer(serializers.ModelSerializer):
     class Meta:
         model = Participant
-        fields = ['name','standard','gender']
+        fields = ['id','name','standard','gender']
 
 class SchoolSerializer(serializers.ModelSerializer):
     class Meta:
