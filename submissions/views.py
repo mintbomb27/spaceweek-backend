@@ -68,7 +68,7 @@ class ParticipantView(generics.GenericAPIView):
         if(participant.school != school):
             raise Exception(401, "Participant does not belong to your school.")
         if(participant.event != event):
-            raise Exception(400, "Participant does not belong to the mentioned event.")
+            raise Exception(400, "Participant is not registered for the mentioned event.")
         part = participant.delete()
         return GenericResponse('Removed Participant from Event',part)
 
@@ -84,7 +84,7 @@ class ParticipantView(generics.GenericAPIView):
         event = Event.objects.get(id=event_id)
         if event.deadline: # Check Deadline
             if timezone.now() > event.deadline:
-                raise Exception(422, "deadline passed for submission.")
+                raise Exception(422, "deadline passed for registration.")
         school = School.objects.get(poc=request.user)
         participants_for_events = Participant.objects.filter(event=event,school=school).count()
         if(standard not in event.eligibility):
@@ -98,9 +98,18 @@ class ParticipantView(generics.GenericAPIView):
         participant.save()
         return GenericResponse('Registered Student', ParticipantSerializer(participant).data)
 
-class UploadParticipantsView(generics.GenericAPIView):
+class ParticipantsView(generics.GenericAPIView):
     serializer_class = ParticipantSerializer
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, *args, **kwargs):
+        event_id = request.GET.get('event_id', None)
+        if event_id is None:
+            raise Exception(400, "event_id not passed")
+        event = Event.objects.get(id=event_id)
+        school = School.objects.get(poc=request.user)
+        Participant.objects.filter(event=event, school=school).delete()
+        return GenericResponse('delete all participants for the event', '')
 
     def post(self, request, *args, **kwargs):
         file = request.FILES.get('file', None)
@@ -130,86 +139,28 @@ class UploadParticipantsView(generics.GenericAPIView):
                     gender = row[1]
                     standard = row[2]
                     if(gender.lower() not in ['male','female','other']):
+                        delete = default_storage.delete(dirr)
                         raise Exception(400, f'Gender not given as per template. Given {gender}')
                     if(type(standard) is float): 
                         if(standard < 1 or standard > 12):
+                            delete = default_storage.delete(dirr)
                             raise Exception(400, f'`{standard}`: standard not as per given template')
                         else:
-                            print(event.eligibility)
-                            print(int(standard))
-                            print(int(standard))
-                            if(str(int(standard)) not in event.eligibility):
+                            standard = str(int(standard))
+                            if(standard not in event.eligibility):
+                                delete = default_storage.delete(dirr)
                                 raise Exception(400, f"`{standard}` standard not eligible for the event.")
-                    if(type(standard) is str and standard.lower() != 'college'):
+                    elif(type(standard) is str and standard.lower() != 'college'):
+                        delete = default_storage.delete(dirr)
                         raise Exception(400, f'`{standard}`: standard not as per given template')
                     participant = Participant(name=name, gender=gender, standard=standard, event=event, school=school)
                     participants.append(participant)
             # Already registered count
             if(participants_for_events+len(participants) >= event.max_per_school):# check if max reached
-                raise Exception(400, f"You may only add {event.max_per_school-participants_for_events} more participants. Already added {participants_for_events}.")
+                delete = default_storage.delete(dirr)
+                raise Exception(400, f"You may only add {event.max_per_school-participants_for_events} more participants for the event. Requested to add {participants_for_events}.")
             Participant.objects.bulk_create(participants)#ignore_conflicts
             delete = default_storage.delete(dirr)
             return GenericResponse("registered participants", "Success")
         else:
             raise Exception(400, "Invalid file")
-
-# class CreateSubmissionView(generics.GenericAPIView):
-#     serializer_class = SubmissionSerializer
-#     permission_classes = [IsAuthenticated]
-
-#     def submit_file(self, file, filename, accepted_formats):
-#         ext = file.name.split('.')[-1]
-#         filename = f"{filename}.{ext}"
-#         if ext.upper() in accepted_formats:
-#             file_save = default_storage.save(f'{filename}', file)
-#             filename = "submissions/" + file_save.split('/')[-1]
-#             result = storage.child(filename).put(file_save)
-#             url = storage.child(filename).get_url(None)
-#             delete = default_storage.delete(file_save)
-#             return url
-#         else:
-#             raise Exception(400, 'invalid file format')
-
-#     def post(self, request,*args, **kwargs):
-#         participant = Participant.objects.get(user_id = request.user.id)
-#         print('hellooo')
-#         print(request.POST)
-#         event = Event.objects.get(id=request.data['event_id'])
-#         print('hellooo')
-        # if event.deadline: # Check Deadline
-        #     if timezone.now() > event.deadline:
-        #         raise Exception(422, "deadline passed for submission.")
-#         if event.file_submission: # File Submission
-#             file = request.FILES.get('file', None)
-#             print(file)
-#             if file is None:
-#                 raise Exception(422, "file submission expected, but not received.")
-#             url = self.submit_file(file, f"{event.id}_{request.user.reg_no}", event.accepted_formats)
-#         else: # Link Submission
-#             url_rx = r"^(http(s)?:\/\/)[\w.-]+(?:\.[\w\.-]+)+[\w\-\._~:/?#[\]@!\$&'\(\)\*\+,;=.]+$"
-#             url = request.data.get('file', None)
-#             if url is None or type(url) is not str:
-#                 raise Exception(422, 'link submission expected, but not received.')
-#             if re.search(url_rx, url) is None:
-#                 raise Exception(422, 'invalid URL passed.')
-#         try: # User can make as many submissions as they want till deadline
-#             submission = Submission.objects.get(participant = participant,event = event)
-#             submission.file = url
-#         except Submission.DoesNotExist:
-#             submission = Submission(event = event, file = url,participant = participant)
-#         submission.save()
-#         return GenericResponse("success",SubmissionSerializer(submission).data)
-
-# class MyProfileView(generics.GenericAPIView):
-#     serializer_class = EventSerializer
-#     permission_classes = [IsAuthenticated]
-
-#     def get(self, request, *args, **kwargs):
-#         events = Event.objects.all()
-#         profile = {
-#             'name':request.user.full_name,
-#             'reg_no':request.user.reg_no
-#         }
-#         participant = Participant.objects.get(user_id=request.user.id)
-#         submissions = Submission.objects.filter(participant_id=participant.participant_id)
-#         return GenericResponse('success', {'profile':profile, 'events':EventSerializer(events, many=True).data, 'submissions':SubmissionSerializer(submissions, many=True).data})
