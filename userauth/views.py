@@ -7,7 +7,7 @@ from dj_rest_auth.app_settings import create_token
 from rest_framework import generics
 from django.core.mail import send_mail
 from django.contrib.auth.hashers import make_password
-from submissions.serializers import SubmissionSerializer
+from submissions.models import School
 from spaceweekBackend.helpers import GenericResponse
 from userauth.utils import otp_msg, create_otp
 from rest_framework.renderers import TemplateHTMLRenderer
@@ -20,42 +20,89 @@ from pathlib import Path
 from openpyxl import *
 from django.core.files.storage import default_storage
 
-class RootView(APIView):
-    renderer_classes = [TemplateHTMLRenderer]
-    template_name = 'portal/login.html'
-
-    def get_template(self):
-        if(self.request.user.is_authenticated):
-            return 'portal/dashboard.html'
-        else:
-            return 'portal/login.html'
-    
-    def get(self, request, *args, **kwargs):
-        return Response({})
-
 class CustomRegisterView(generics.GenericAPIView):
     serializer_class = CustomRegisterSerializer
 
     def create_participant(self, user):
         last = Participant.objects.all().order_by('participant_id').last()
         if not last:
-            pid = 'TMAP0001'
+            pid = 'SPWK000001'
         else:
             last_id = int(last.participant_id.split('P')[1])
-            pid = 'TMAP' + str(last_id+1).zfill(4)
+            pid = 'SPWK' + str(last_id+1).zfill(6)
         participant = Participant(user=user,participant_id=pid,reg_no=user.reg_no)
-        print(participant)
         participant.save()
+    
+    def user_exists(self, email, contact):
+        UserModel = get_user_model()
+        if contact is not None and contact != '':
+            try:
+                user = UserModel.objects.get(contact=contact)
+                return user
+            except UserModel.DoesNotExist:
+                if email is not None and email != '':
+                    try:
+                        user = UserModel.objects.get(email=email)
+                        return user
+                    except UserModel.DoesNotExist:
+                        return None
+                else:
+                    return None
+        else:
+            return None
+
+    def validate_user(self,email,contact,password):
+        #Input Validation
+        pass_rx = '^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#\$%\^&\*]).{8,}$'
+        if(password is not None and re.search(pass_rx,password) is None):
+            raise Exception(422, 'Password should contain a lowercase, an uppercase character, a number, and a special character.')
+        if(contact and len(str(contact)) < 10):
+            raise Exception(422, 'Invalid Phone Number')
+
+        #DB Checks
+        UserModel = get_user_model()
+        if contact is not None and contact != '':
+            try:
+                user = UserModel.objects.get(contact=contact, reg_complete=True)
+                raise Exception('contact already exists')
+            except UserModel.DoesNotExist:
+                if email is not None and email != '':
+                    try:
+                        user = UserModel.objects.get(email=email, email_verified=True, reg_complete=True)
+                        raise Exception('email already exists')
+                    except UserModel.DoesNotExist:
+                        return True
+                else:
+                    return True
+        else:
+            raise Exception('contact is not provided')
 
     def post(self, request, *args, **kwargs):
         user_data = self.get_serializer(data=request.data)
         user_data.is_valid(raise_exception=True)
-        if(user_data.validate_user()):
+        school_name = request.data.get('school_name', None)
+        school_address = request.data.get('school_address', None)
+        email = request.data.get('email', None)
+        contact = request.data.get('contact', None)
+        password = request.data.get('password', None)
+        name = request.data.get('name', None)
+        if(school_name is None):
+            raise Exception(400, "School Name not provided")
+        if(school_address is None):
+            raise Exception(400, "School Address not provided")
+        try:
+            school = School.objects.get(name=school_name)
+            raise Exception('400', 'school name already exists.')
+        except School.DoesNotExist as e:
+            pass
+        if(self.validate_user(email, contact, password)):
             otp = create_otp()
+            name = user_data.validated_data.get('name', None)
             email = user_data.validated_data.get('email', None)
             password = user_data.validated_data.get('password', None)
+            contact = user_data.validated_data.get('contact', None)
             otp_validity = datetime.now() + timedelta(minutes=10)
-            user = user_data.user_exists()
+            user = self.user_exists(email, contact)
             if user is not None:
                 if user.otp_validity:
                     time_diff = user.otp_validity.replace(tzinfo=None) - datetime.now()
@@ -64,14 +111,13 @@ class CustomRegisterView(generics.GenericAPIView):
                 user.otp = otp
                 user.password = make_password(password)
                 user.otp_validity = otp_validity
-                user.email_verified = True
-                user.reg_complete = True
                 user.save()
-                self.create_participant(user)
             else:
-                user = user_data.save(otp=otp, otp_validity=otp_validity, password=make_password(password))
-                self.create_participant(user)
-            # send_mail('Verification Mail for spaceweek Portal', otp_msg(otp), None, recipient_list=[email], fail_silently=True)
+                user = get_user_model()(name=name, contact=contact, email=email, otp=otp, otp_validity=otp_validity, password=make_password(password))
+                user.save()
+            school = School(name=school_name, poc=user, address=school_address)
+            school.save()
+            # send_mail('Verification Mail for Thanima Portal', otp_msg(otp), None, recipient_list=[email], fail_silently=True)
             return GenericResponse('Registered. OTP Sent.','Success')
 
 class OTPVerifyView(LoginView):
@@ -136,7 +182,7 @@ class ForgotPasswordRequest(generics.GenericAPIView):
         otp = create_otp()
         user.otp = otp
         user.otp_validity = datetime.now() + timedelta(minutes=10)
-        send_mail('Forgot Password Request for  Portal', otp_msg(otp), None, recipient_list=[user.email], fail_silently=True)
+        send_mail('Forgot Password Request for Thanima Portal', otp_msg(otp), None, recipient_list=[user.email], fail_silently=True)
         user.save()
         return GenericResponse('OTP sent', '')
 
@@ -187,40 +233,40 @@ class ForgotPasswordView(generics.GenericAPIView):
         else:
             raise Exception(422, 'passwords do not match.')
 
-class UploadRegistrations(generics.GenericAPIView):
-    serializer_class = RegistrationSerializer
-    permission_classes = [IsAdminUser]
+# class UploadRegistrations(generics.GenericAPIView):
+#     serializer_class = RegistrationSerializer
+#     permission_classes = [IsAdminUser]
 
-    def post(self, request, *args, **kwargs):
-        file = request.FILES.get('file', None)
-        if file is None:
-                raise Exception(400, "file not passed")
-        ext = file.name.split('.')[-1]
-        if(ext in ['xls','xlsx']):
-            filename = f"{uuid4()}.{ext}"
-            dirr = default_storage.save(filename, file)
-            wb = load_workbook(dirr)
-            registrations = []
-            for sheet in wb:
-                for row in sheet.iter_rows(min_row=1, max_col=5, max_row=2000, values_only=True):
-                    if not row[0]:
-                        break
-                    if str(row[1]) == 'Name':
-                        continue
-                    receipt = row[0]
-                    name = row[1]
-                    reg_no = row[2]
-                    email = row[3]
-                    contact = row[4]
-                    if(len(reg_no) >= 10):
-                        reg_no = reg_no.replace(' ', '')
-                    # if(len(str(contact)) >= 10):
-                    #     contact = str(contact).replace(' ', '')
-                    # print(name, reg_no, email, contact)
-                    registration = Registration(receipt=receipt, name=name, reg_no=reg_no, email=email, mobile_no=contact)
-                    registrations.append(registration)
-            Registration.objects.bulk_create(registrations, ignore_conflicts=True)
-            delete = default_storage.delete(dirr)
-            return GenericResponse("created users", "Success")
-        else:
-            raise Exception(400, "Invalid file")
+#     def post(self, request, *args, **kwargs):
+#         file = request.FILES.get('file', None)
+#         if file is None:
+#                 raise Exception(400, "file not passed")
+#         ext = file.name.split('.')[-1]
+#         if(ext in ['xls','xlsx']):
+#             filename = f"{uuid4()}.{ext}"
+#             dirr = default_storage.save(filename, file)
+#             wb = load_workbook(dirr)
+#             registrations = []
+#             for sheet in wb:
+#                 for row in sheet.iter_rows(min_row=1, max_col=5, max_row=2000, values_only=True):
+#                     if not row[0]:
+#                         break
+#                     if str(row[1]) == 'Name':
+#                         continue
+#                     receipt = row[0]
+#                     name = row[1]
+#                     reg_no = row[2]
+#                     email = row[3]
+#                     contact = row[4]
+#                     if(len(reg_no) >= 10):
+#                         reg_no = reg_no.replace(' ', '')
+#                     # if(len(str(contact)) >= 10):
+#                     #     contact = str(contact).replace(' ', '')
+#                     # print(name, reg_no, email, contact)
+#                     registration = Registration(receipt=receipt, name=name, reg_no=reg_no, email=email, mobile_no=contact)
+#                     registrations.append(registration)
+#             Registration.objects.bulk_create(registrations, ignore_conflicts=True)
+#             delete = default_storage.delete(dirr)
+#             return GenericResponse("created users", "Success")
+#         else:
+#             raise Exception(400, "Invalid file")

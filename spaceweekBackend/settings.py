@@ -28,7 +28,7 @@ environ.Env.read_env(env_file=os.path.join(BASE_DIR, ".env"))
 SECRET_KEY = env('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = ['127.0.0.1','localhost',env('SERVER_HOST')]
 
@@ -130,7 +130,7 @@ WSGI_APPLICATION = 'spaceweekBackend.wsgi.application'
 # https://docs.djangoproject.com/en/4.0/ref/settings/#databases
 
 DATABASES = {
-    'default': dj_database_url.config(default='postgres://postgres:postgres@localhost:5432/spcaeweek2020')
+    'default': dj_database_url.config(default='postgres://postgres:postgres@localhost:5432/sw2022')
 }
 
 

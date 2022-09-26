@@ -10,46 +10,35 @@ from django.contrib.postgres.fields import ArrayField
 #   position_3 = models.ForeignKey(Participant,on_delete=models.CASCADE) 
 
 class Event(models.Model):
-    id = models.AutoField(primary_key= True)
+    id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=100)
-    subname = models.CharField(max_length=100)
     description = models.TextField(null=True)
-    rules = models.TextField()
-    judging_criteria = models.TextField()
-    #result = models.ForeignKey(Result, on_delete= models.CASCADE)     
-    prize_reveal = models.BooleanField(default=False)
-    prize_1 = models.IntegerField(null=True)
-    prize_2 = models.IntegerField(null=True)
-    prize_3 = models.IntegerField(null=True)
+    guidelines = models.TextField()
+    #result = models.ForeignKey(Result, on_delete= models.CASCADE)
+    eligibility = models.CharField(max_length=100)
+    date = models.DateField()
+    time = models.TimeField()
+    max_per_school = models.IntegerField(default=5)
     type = models.CharField(max_length = 11, choices=[("Individual", "Individual"), ("Team", "Team")])
     eligible_genders = ArrayField(
             models.CharField(max_length=10, choices=[("Male", "Male"), ("Female", "Female")]),
             size=2
         )
     deadline = models.DateTimeField(null=True)
-    file_submission = models.BooleanField(default=False)
-    accepted_formats = ArrayField(
-            models.CharField(max_length=10, choices=[("TIFF","TIFF"), ("JPEG", "JPEG"), ("PNG", "PNG"), ("JPG", "JPG")]),
-            default=list
-        )
 
-
-class Participant(models.Model):
-    participant_id = models.CharField(max_length= 10 ,primary_key=True)
-    reg_no = models.CharField(max_length=15)
-    user = models.ForeignKey(User, on_delete= models.CASCADE)
-    events = models.ManyToManyField(Event)
-    remarks = models.CharField(max_length= 200)
-
-class Teams(models.Model):
-    team_id = models.CharField(max_length=5 ,primary_key=True)
-    team_name = models.CharField(max_length=50)
-    events = models.ManyToManyField(Event)
-    members = models.ManyToManyField(Participant)
-
-class Submission(models.Model):
-    event = models.ForeignKey(Event,on_delete= models.CASCADE)
-    participant = models.ForeignKey(Participant,on_delete=models.CASCADE)
-    time = models.DateTimeField(auto_now=True)
-    file = models.TextField()
+class School(models.Model):
+    id = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=128)
+    poc = models.ForeignKey(User,on_delete= models.CASCADE)
+    address = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
     
+class Participant(models.Model):
+    id = models.CharField(max_length= 10 ,primary_key=True)
+    name = models.CharField(max_length=128)
+    standard = models.CharField(max_length=10, choices=[("1","1"), ("2","2"), ("3","3"), ("4","4"), ("5","5"), ("6","6"), ("7","7"), ("8","8"), ("9","9"), ("10","10"), ("11","11"), ("12","12"), ("College","College"),])
+    gender = models.CharField(max_length=10, choices=[("Male", "Male"), ("Female", "Female"), ("Other", "Other")])
+    school = models.ForeignKey(School,on_delete= models.CASCADE)
+    event = models.ForeignKey(Event,on_delete= models.CASCADE)
+    remarks = models.CharField(null=True,max_length=200)
+    created_at = models.DateTimeField(auto_now_add=True)
