@@ -8,7 +8,7 @@ from rest_framework import generics
 from django.core.mail import send_mail
 from django.contrib.auth.hashers import make_password
 from submissions.serializers import SubmissionSerializer
-from thanimaBackend.helpers import GenericResponse
+from spaceweekBackend.helpers import GenericResponse
 from userauth.utils import otp_msg, create_otp
 from rest_framework.renderers import TemplateHTMLRenderer
 from datetime import timedelta
@@ -71,7 +71,7 @@ class CustomRegisterView(generics.GenericAPIView):
             else:
                 user = user_data.save(otp=otp, otp_validity=otp_validity, password=make_password(password))
                 self.create_participant(user)
-            # send_mail('Verification Mail for Thanima Portal', otp_msg(otp), None, recipient_list=[email], fail_silently=True)
+            # send_mail('Verification Mail for spaceweek Portal', otp_msg(otp), None, recipient_list=[email], fail_silently=True)
             return GenericResponse('Registered. OTP Sent.','Success')
 
 class OTPVerifyView(LoginView):
@@ -136,7 +136,7 @@ class ForgotPasswordRequest(generics.GenericAPIView):
         otp = create_otp()
         user.otp = otp
         user.otp_validity = datetime.now() + timedelta(minutes=10)
-        send_mail('Forgot Password Request for Thanima Portal', otp_msg(otp), None, recipient_list=[user.email], fail_silently=True)
+        send_mail('Forgot Password Request for  Portal', otp_msg(otp), None, recipient_list=[user.email], fail_silently=True)
         user.save()
         return GenericResponse('OTP sent', '')
 

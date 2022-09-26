@@ -1,5 +1,5 @@
 import re
-from thanimaBackend.helpers import GenericResponse
+from spaceweekBackend.helpers import GenericResponse
 from rest_framework import generics
 from .serializers import *
 from .models import Event
