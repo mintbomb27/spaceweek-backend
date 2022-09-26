@@ -141,7 +141,7 @@ class ParticipantsView(generics.GenericAPIView):
                     if(gender.lower() not in ['male','female','other']):
                         delete = default_storage.delete(dirr)
                         raise Exception(400, f'Gender not given as per template. Given {gender}')
-                    if(type(standard) is float): 
+                    if(type(standard) is float or type(standard) is int):
                         if(standard < 1 or standard > 12):
                             delete = default_storage.delete(dirr)
                             raise Exception(400, f'`{standard}`: standard not as per given template')
@@ -156,7 +156,7 @@ class ParticipantsView(generics.GenericAPIView):
                     participant = Participant(name=name, gender=gender, standard=standard, event=event, school=school)
                     participants.append(participant)
             # Already registered count
-            if(participants_for_events+len(participants) >= event.max_per_school):# check if max reached
+            if(participants_for_events+len(participants) > event.max_per_school):# check if max reached
                 delete = default_storage.delete(dirr)
                 raise Exception(400, f"You may only add {event.max_per_school-participants_for_events} more participants for the event. Requested to add {len(participants)}.")
             Participant.objects.bulk_create(participants)#ignore_conflicts
