@@ -66,12 +66,14 @@ class RegisterForEventView(generics.CreateAPIView):
                 raise Exception(422, "deadline passed for submission.")
         school = School.objects.get(poc=request.user)
         participants_for_events = Participant.objects.filter(event=event,school=school).count()
-        if(participants_for_events >= event.max_per_school):
+        if(standard not in event.eligibility):
+            raise Exception(400, "selected standard not eligible for the event.")
+        if(participants_for_events >= event.max_per_school):# check if max reached
             raise Exception(400, "maximum participants for events reached")
         if event.deadline: # Check Deadline
             if timezone.now() > event.deadline:
                 raise Exception(422, "deadline passed for submission.")
-        participant = Participant(name=data.validated_data.get('name'),standard=data.validated_data.get('standard'), gender=data.validated_data.get('gender'), school=school, event=event)
+        participant = Participant(name=name,standard=standard, gender=gender, school=school, event=event)
         participant.save()
         return GenericResponse('Registered Student', ParticipantSerializer(participant).data)
 
