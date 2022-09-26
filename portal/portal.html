@@ -1,0 +1,50 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Login | Thanima 2020</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+    <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+    <link rel="stylesheet" href="{% static 'portal/css/profile.css' %}">
+</head>
+<body>
+    <nav class="navbar navbar-inverse">
+        <div class="container-fluid">
+            <div class="navbar-header">
+                <a class="navbar-brand" href="">Thanima 2020 Portal</a>
+            </div>
+            <ul class="nav navbar-nav navbar-right">
+                <li><a onclick="logout()"><span class="glyphicon glyphicon-log-in"></span> Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+    <div class="jumbotron">
+        <div class="container">
+            <div class="panel panel-info">
+                <div class="panel-heading">
+                    <h2>Contests</h2>
+                </div>
+                <div class="panel-body" id="contests">
+                    <div class="alert alert-danger">
+                        <strong>Note:</strong> Login through Desktop/Laptop browsers for uploading files. If you are not
+                        able to see your submission after uploading, try logout & login again. Contact <a
+                        href="mailto:admin@thanima.org">admin@thanima.org</a> for any help.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container-fluid">
+        &copy; Copyright <strong><span>2022 Thanima Team</span></strong><br>
+        Developed by
+        <a href="https://www.instagram.com/ali_kkaz/">Thanima Team</a>
+    </div>
+    <script src="{% static 'portal/js/portal.js' %}"></script>
+</body>
+</html>
