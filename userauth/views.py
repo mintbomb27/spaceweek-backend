@@ -104,7 +104,7 @@ class CustomRegisterView(generics.GenericAPIView):
             otp_validity = datetime.now() + timedelta(minutes=10)
             user = self.user_exists(email, contact)
             if user is not None:
-                raise Exception(400, "Email ID already exists.")
+                raise Exception(400, "Email ID or contact already exists.")
                 # if user.otp_validity:
                 #     time_diff = user.otp_validity.replace(tzinfo=None) - datetime.now()
                 # # if time_diff.seconds > 480 and time_diff.seconds < 600:
