@@ -19,6 +19,18 @@ from rest_framework.permissions import IsAdminUser
 from pathlib import Path
 from openpyxl import *
 from django.core.files.storage import default_storage
+from django.db.utils import OperationalError
+from django.db import connections
+
+class RootView(APIView):
+    def get(self, request, *args, **kwargs):
+        db_conn = connections['default']
+        try:
+            c = db_conn.cursor()
+        except OperationalError as e:
+            return GenericResponse('DB Connection failed',str(e), status=500)
+        else:
+            return GenericResponse('Server is up!',"")
 
 class CustomRegisterView(generics.GenericAPIView):
     serializer_class = CustomRegisterSerializer
