@@ -10,7 +10,7 @@ class EventSerializer(serializers.ModelSerializer):
 class EventDashSerializer(serializers.ModelSerializer):
     class Meta:
         model = Event
-        fields = ['id','name','image','date','time']
+        fields = ['id','name','image','date','time','location']
 
 class ParticipantSerializer(serializers.ModelSerializer):
     class Meta:
