@@ -104,14 +104,15 @@ class CustomRegisterView(generics.GenericAPIView):
             otp_validity = datetime.now() + timedelta(minutes=10)
             user = self.user_exists(email, contact)
             if user is not None:
-                if user.otp_validity:
-                    time_diff = user.otp_validity.replace(tzinfo=None) - datetime.now()
-                # if time_diff.seconds > 480 and time_diff.seconds < 600:
-                #     raise Exception(429, 'otp already requested in last 2 minutes.')
-                user.otp = otp
-                user.password = make_password(password)
-                user.otp_validity = otp_validity
-                user.save()
+                raise Exception(400, "Email ID already exists.")
+                # if user.otp_validity:
+                #     time_diff = user.otp_validity.replace(tzinfo=None) - datetime.now()
+                # # if time_diff.seconds > 480 and time_diff.seconds < 600:
+                # #     raise Exception(429, 'otp already requested in last 2 minutes.')
+                # user.otp = otp
+                # user.password = make_password(password)
+                # user.otp_validity = otp_validity
+                # user.save()
             else:
                 user = get_user_model()(name=name, contact=contact, email=email, otp=otp, otp_validity=otp_validity, password=make_password(password))
                 user.save()
