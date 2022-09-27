@@ -7,6 +7,11 @@ class EventSerializer(serializers.ModelSerializer):
         model = Event
         fields = '__all__'
 
+class EventDashSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Event
+        fields = ['id','name','description']
+
 class ParticipantSerializer(serializers.ModelSerializer):
     class Meta:
         model = Participant

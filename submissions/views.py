@@ -51,6 +51,16 @@ class CreateEventView(generics.CreateAPIView):
         response = super().create(request, *args, **kwargs)
         return GenericResponse("success",response.data)
 
+class DashboardView(generics.GenericAPIView):
+    serializer_class = EventDashSerializer
+
+    def get(self, request, *args, **kwargs):
+        response = {
+            'name':request.user.name,
+            'events':EventDashSerializer(Event.objects.all(),many=True).data
+        }
+        return GenericResponse('success',response)
+
 class ParticipantView(generics.GenericAPIView):
     serializer_class = ParticipantSerializer
     permission_classes = [IsAuthenticated]

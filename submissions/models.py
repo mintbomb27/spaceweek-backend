@@ -18,6 +18,7 @@ class Event(models.Model):
             models.CharField(max_length=10, choices=[("1","1"), ("2","2"), ("3","3"), ("4","4"), ("5","5"), ("6","6"), ("7","7"), ("8","8"), ("9","9"), ("10","10"), ("11","11"), ("12","12"), ("College","College"),]),
             size=13
         )
+    image = models.TextField()
     date = models.DateField()
     time = models.TimeField()
     max_per_school = models.IntegerField(default=5)
