@@ -86,8 +86,6 @@ class ParticipantView(generics.GenericAPIView):
         return GenericResponse('Removed Participant from Event',part)
 
     def post(self, request, *args, **kwargs):
-        data = self.get_serializer(data=request.data)
-        data.is_valid(raise_exception=True)
         name=request.data.get('name', None)
         if name is None :
             raise Exception(400,"Name not passed")
@@ -95,7 +93,6 @@ class ParticipantView(generics.GenericAPIView):
             pass
         else:
             raise Exception(400,"Name should not be empty")
-        
         gender=request.data.get('gender', None)
         if gender is None :
             raise Exception(400,"Name not passed")
@@ -115,6 +112,8 @@ class ParticipantView(generics.GenericAPIView):
         if(event_id is None):
             raise Exception(400, 'event id not provided')
         event = Event.objects.get(id=event_id)
+        if(event.type != 'Individual'):
+            raise Exception(400, "Team submission expected.")
         if event.deadline: # Check Deadline
             if timezone.now() > event.deadline:
                 raise Exception(422, "deadline passed for registration.")
@@ -248,6 +247,8 @@ class ParticipantsView(generics.GenericAPIView):
         if event_id is None:
             raise Exception(400, "event_id not passed")
         event = Event.objects.get(id=event_id)
+        if(event.type != 'Individual'):
+            raise Exception(400, "Team submission expected.")
         school = School.objects.get(poc=request.user)
         if file is None:
                 raise Exception(400, "file not passed")
