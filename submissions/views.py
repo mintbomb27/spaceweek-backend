@@ -85,17 +85,25 @@ class ParticipantView(generics.GenericAPIView):
     def post(self, request, *args, **kwargs):
         data = self.get_serializer(data=request.data)
         data.is_valid(raise_exception=True)
-        name=data.validated_data.get('name', None)
+        name=request.data.get('name', None)
+        if name is None :
+            raise Exception(400,"Name not passed")
         if name and name.strip():
             pass
         else:
             raise Exception(400,"Name should not be empty")
-        gender=data.validated_data.get('gender', None)
+        
+        gender=request.data.get('gender', None)
+        if gender is None :
+            raise Exception(400,"Name not passed")
         if gender and gender.strip():
             pass
         else:
             raise Exception(400,"gender should not be empty")
-        standard = data.validated_data.get('standard', None)
+
+        standard = request.data.get('standard', None)
+        if standard is None :
+            raise Exception(400,"Name not passed")
         if standard and standard.strip():
             pass
         else:
