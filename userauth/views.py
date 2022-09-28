@@ -44,30 +44,15 @@ class CustomRegisterView(generics.GenericAPIView):
             pid = 'SPWK' + str(last_id+1).zfill(6)
         participant = Participant(user=user,participant_id=pid,reg_no=user.reg_no)
         participant.save()
-    
-    def user_exists(self, email, contact):
-        UserModel = get_user_model()
-        if contact is not None and contact != '':
-            try:
-                user = UserModel.objects.get(contact=contact)
-                return user
-            except UserModel.DoesNotExist:
-                if email is not None and email != '':
-                    try:
-                        user = UserModel.objects.get(email=email)
-                        return user
-                    except UserModel.DoesNotExist:
-                        return None
-                else:
-                    return None
-        else:
-            return None
 
     def validate_user(self,email,contact,password):
         #Input Validation
+        email_rx = "[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?"
         pass_rx = '^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#\$%\^&\*]).{8,}$'
+        if(email is not None and re.search(email_rx, email) is None):
+            raise Exception(422, 'Invalid email address')
         if(password is not None and re.search(pass_rx,password) is None):
-            raise Exception(422, 'Password should contain a lowercase, an uppercase character, a number, and a special character.')
+            raise Exception(422, 'Password should be min. 8 characters, contain a lowercase, an uppercase, a number, and a special character.')
         if(contact and len(str(contact)) < 10):
             raise Exception(422, 'Invalid Phone Number')
 
@@ -76,12 +61,12 @@ class CustomRegisterView(generics.GenericAPIView):
         if contact is not None and contact != '':
             try:
                 user = UserModel.objects.get(contact=contact, reg_complete=True)
-                raise Exception('contact already exists')
+                raise Exception(400, 'contact already exists')
             except UserModel.DoesNotExist:
                 if email is not None and email != '':
                     try:
                         user = UserModel.objects.get(email=email, email_verified=True, reg_complete=True)
-                        raise Exception('email already exists')
+                        raise Exception(400, 'email already exists')
                     except UserModel.DoesNotExist:
                         return True
                 else:
@@ -90,8 +75,6 @@ class CustomRegisterView(generics.GenericAPIView):
             raise Exception('contact is not provided')
 
     def post(self, request, *args, **kwargs):
-        user_data = self.get_serializer(data=request.data)
-        user_data.is_valid(raise_exception=True)
         school_name = request.data.get('school_name', None)
         school_address = request.data.get('school_address', None)
         email = request.data.get('email', None)
@@ -109,25 +92,9 @@ class CustomRegisterView(generics.GenericAPIView):
             pass
         if(self.validate_user(email, contact, password)):
             otp = create_otp()
-            name = user_data.validated_data.get('name', None)
-            email = user_data.validated_data.get('email', None)
-            password = user_data.validated_data.get('password', None)
-            contact = user_data.validated_data.get('contact', None)
             otp_validity = datetime.now() + timedelta(minutes=10)
-            user = self.user_exists(email, contact)
-            if user is not None:
-                raise Exception(400, "Email ID or contact already exists.")
-                # if user.otp_validity:
-                #     time_diff = user.otp_validity.replace(tzinfo=None) - datetime.now()
-                # # if time_diff.seconds > 480 and time_diff.seconds < 600:
-                # #     raise Exception(429, 'otp already requested in last 2 minutes.')
-                # user.otp = otp
-                # user.password = make_password(password)
-                # user.otp_validity = otp_validity
-                # user.save()
-            else:
-                user = get_user_model()(name=name, contact=contact, email=email, otp=otp, otp_validity=otp_validity, password=make_password(password))
-                user.save()
+            user = get_user_model()(name=name, contact=contact, email=email, otp=otp, otp_validity=otp_validity, password=make_password(password), reg_complete=True)
+            user.save()
             school = School(name=school_name, poc=user, address=school_address)
             school.save()
             # send_mail('Verification Mail for Thanima Portal', otp_msg(otp), None, recipient_list=[email], fail_silently=True)
