@@ -41,8 +41,9 @@ class DetailView(generics.ListAPIView):
         event = Event.objects.get(id=id)
         school = School.objects.get(poc=request.user)
         participants = ParticipantSerializer(Participant.objects.filter(event=event, school=school), many=True).data
-        for participant in participants:
-            participant['team_name']=Team.objects.get(participants__id=participant['id']).name
+        if(event.type == 'Team'):
+            for participant in participants:
+                participant['team_name']=Team.objects.get(participants__id=participant['id']).name
         return GenericResponse("success", {"event":EventSerializer(event).data, "participants":participants})
 
 class CreateEventView(generics.CreateAPIView):
