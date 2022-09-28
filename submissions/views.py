@@ -57,7 +57,7 @@ class DashboardView(generics.GenericAPIView):
     def get(self, request, *args, **kwargs):
         response = {
             'name':request.user.name,
-            'events':EventDashSerializer(Event.objects.all(),many=True).data
+            'events':EventDashSerializer(Event.objects.all().order_by('id'),many=True).data
         }
         return GenericResponse('success',response)
 
