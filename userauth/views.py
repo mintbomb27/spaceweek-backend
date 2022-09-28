@@ -93,7 +93,7 @@ class CustomRegisterView(generics.GenericAPIView):
         if(self.validate_user(email, contact, password)):
             otp = create_otp()
             otp_validity = datetime.now() + timedelta(minutes=10)
-            user = get_user_model()(name=name, contact=contact, email=email, otp=otp, otp_validity=otp_validity, password=make_password(password), reg_complete=True)
+            user = get_user_model()(name=name, contact=contact, email=email, otp=otp, otp_validity=otp_validity, password=make_password(password),email_verified=True, reg_complete=True)
             user.save()
             school = School(name=school_name, poc=user, address=school_address)
             school.save()
