@@ -1,5 +1,5 @@
 from dataclasses import field
-from .models import Event, Participant, School
+from .models import Event, Participant, School, Team
 from rest_framework import serializers
 
 class EventSerializer(serializers.ModelSerializer):
@@ -20,4 +20,9 @@ class ParticipantSerializer(serializers.ModelSerializer):
 class SchoolSerializer(serializers.ModelSerializer):
     class Meta:
         model = School
+        fields = '__all__'
+
+class TeamSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Team
         fields = '__all__'
