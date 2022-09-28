@@ -40,8 +40,10 @@ class DetailView(generics.ListAPIView):
             raise Exception(400, 'id not passed')
         event = Event.objects.get(id=id)
         school = School.objects.get(poc=request.user)
-        participants = Participant.objects.filter(event=event, school=school)
-        return GenericResponse("success", {"event":EventSerializer(event).data, "participants":ParticipantSerializer(participants, many=True).data})
+        participants = ParticipantSerializer(Participant.objects.filter(event=event, school=school), many=True).data
+        for participant in participants:
+            participant['team_name']=Team.objects.get(participants__id=participant['id']).name
+        return GenericResponse("success", {"event":EventSerializer(event).data, "participants":participants})
 
 class CreateEventView(generics.CreateAPIView):
     serializer_class = EventSerializer
@@ -183,10 +185,11 @@ class TeamView(generics.GenericAPIView):
                     team = curr_teams.get(name=team_name)
                     #team name already exists
                     if(team.school == school):
-                        if(len(team.participants) < event.max_per_team):#Team under the same school, and space left
-                            if((event.max_per_team - len(team.participants)) >= len(teams[team_name])):#all participants mentioned can enter
-                                Participant.objects.bulk_create(teams[team_name])
-                                team.participants += teams[team_name]
+                        if(team.participants.count() < event.max_per_team):#Team under the same school, and space left
+                            if((event.max_per_team - team.participants.count()) >= len(teams[team_name])):#all participants mentioned can enter
+                                for part in teams[team_name]:
+                                    part.save()
+                                    team.participants.add(part)
                                 team.save()
                             else:
                                 raise Exception(400, f"Team already has {len(team.participants)}. Cannot add {len(teams[team_name])} more.")
@@ -199,15 +202,15 @@ class TeamView(generics.GenericAPIView):
                     if(len(teams[team_name]) > event.max_per_team):
                         raise Exception(400, f"Team `{team_name}` has more than {event.max_per_team} participants.")
                     team = Team(name=team_name, event=event, school=school)
-                    team.participants.set(teams[team_name])
-                    final_parts.append(teams[team_name])
-                    final_teams.append(team)
+                    team.save()
+                    for part in teams[team_name]:
+                        part.save()
+                        team.participants.add(part)
+                    team.save()
             # Already registered count
             if(participants_for_events+len(participants) > event.max_per_school):# check if max reached
                 delete = default_storage.delete(dirr)
                 raise Exception(400, f"You may only add {event.max_per_school-participants_for_events} more participants for the event. Requested to add {len(participants)}.")
-            Participant.objects.bulk_create(final_parts)#ignore_conflicts
-            Team.objects.bulk_create(final_teams)
             delete = default_storage.delete(dirr)
             return GenericResponse("Registered participants", "Success")
         else:
