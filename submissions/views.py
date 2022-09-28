@@ -100,7 +100,6 @@ class ParticipantView(generics.GenericAPIView):
             pass
         else:
             raise Exception(400,"gender should not be empty")
-
         standard = request.data.get('standard', None)
         if standard is None :
             raise Exception(400,"Name not passed")
@@ -112,7 +111,7 @@ class ParticipantView(generics.GenericAPIView):
         if(event_id is None):
             raise Exception(400, 'event id not provided')
         event = Event.objects.get(id=event_id)
-        if(event.type != 'Individual'):
+        if(event.type == 'Team'):
             raise Exception(400, "Team submission expected.")
         if event.deadline: # Check Deadline
             if timezone.now() > event.deadline:
@@ -201,7 +200,7 @@ class TeamView(generics.GenericAPIView):
                                 team.save()
                             else:
                                 delete = default_storage.delete(dirr)
-                                raise Exception(400, f"Team already has {len(team.participants)}. Cannot add {len(teams[team_name])} more.")
+                                raise Exception(400, f"Team already has {team.participants.count()}. Cannot add {len(teams[team_name])} more.")
                         else:
                             delete = default_storage.delete(dirr)
                             raise Exception(400, f"Team {team.name} already has {event.max_per_team} members")
