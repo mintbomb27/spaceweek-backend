@@ -108,6 +108,99 @@ class ParticipantView(generics.GenericAPIView):
         participant.save()
         return GenericResponse('Registered Student', ParticipantSerializer(participant).data)
 
+class TeamView(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = TeamSerializer
+
+    def post(self, request, *args, **kwargs):
+        file = request.FILES.get('file', None)
+        event_id = request.data.get('event_id', None)
+        if event_id is None:
+            raise Exception(400, "event_id not passed")
+        event = Event.objects.get(id=event_id)
+        if(event.type != 'Team'):
+            raise Exception(400, "Mentioned event is not team event.")
+        school = School.objects.get(poc=request.user)
+        if file is None:
+                raise Exception(400, "file not passed")
+        participants_for_events = Participant.objects.filter(event=event,school=school).count()
+        if(participants_for_events >= event.max_per_school):# check if max reached
+            raise Exception(400, "Maximum participants from your school for the event reached")
+        ext = file.name.split('.')[-1]
+        if(ext in ['xls','xlsx']):
+            filename = f"{uuid4()}.{ext}"
+            dirr = default_storage.save(filename, file)
+            wb = load_workbook(dirr)
+            participants = []
+            final_parts = []
+            teams = {}
+            final_teams = []
+            curr_teams = Team.objects.all()
+            for sheet in wb:
+                for row in sheet.iter_rows(min_row=1, max_col=4, max_row=2000, values_only=True):
+                    if not row[0]:
+                        break
+                    if str(row[0]) == 'Name':
+                        continue
+                    name = row[0]
+                    gender = row[1]
+                    standard = row[2]
+                    team_name = row[3]
+                    if(gender.lower() not in ['male','female','other']):
+                        delete = default_storage.delete(dirr)
+                        raise Exception(400, f'Gender not given as per template. Given {gender}')
+                    if(type(standard) is float or type(standard) is int):
+                        if(standard < 1 or standard > 12):
+                            delete = default_storage.delete(dirr)
+                            raise Exception(400, f'`{standard}`: standard not as per given template')
+                        else:
+                            standard = str(int(standard))
+                            if(standard not in event.eligibility):
+                                delete = default_storage.delete(dirr)
+                                raise Exception(400, f"`{standard}` standard not eligible for the event.")
+                    elif(type(standard) is str and standard.lower() != 'college'):
+                        delete = default_storage.delete(dirr)
+                        raise Exception(400, f'`{standard}`: standard not as per given template')
+                    participant = Participant(name=name, gender=gender, standard=standard, event=event, school=school)
+                    if(teams.get(team_name, None) is None):
+                        teams[team_name] = [participant]
+                    else:
+                        teams[team_name].append(participant)
+            for team_name in teams.keys():
+                try:
+                    team = curr_teams.get(name=team_name)
+                    #team name already exists
+                    if(team.school == school):
+                        if(len(team.participants) < event.max_per_team):#Team under the same school, and space left
+                            if((event.max_per_team - len(team.participants)) >= len(teams[team_name])):#all participants mentioned can enter
+                                Participant.objects.bulk_create(teams[team_name])
+                                team.participants += teams[team_name]
+                                team.save()
+                            else:
+                                raise Exception(400, f"Team already has {len(team.participants)}. Cannot add {len(teams[team_name])} more.")
+                        else:
+                            raise Exception(400, f"Team {team.name} already has {event.max_per_team} members")
+                    else:
+                        raise Exception(400, f"Team already exists under a different school.")
+                except Team.DoesNotExist:
+                    final_parts += teams[team_name]
+                    if(len(teams[team_name]) > event.max_per_team):
+                        raise Exception(400, f"Team `{team_name}` has more than {event.max_per_team} participants.")
+                    team = Team(name=team_name, event=event, school=school)
+                    team.participants.set(teams[team_name])
+                    final_parts.append(teams[team_name])
+                    final_teams.append(team)
+            # Already registered count
+            if(participants_for_events+len(participants) > event.max_per_school):# check if max reached
+                delete = default_storage.delete(dirr)
+                raise Exception(400, f"You may only add {event.max_per_school-participants_for_events} more participants for the event. Requested to add {len(participants)}.")
+            Participant.objects.bulk_create(final_parts)#ignore_conflicts
+            Team.objects.bulk_create(final_teams)
+            delete = default_storage.delete(dirr)
+            return GenericResponse("Registered participants", "Success")
+        else:
+            raise Exception(400, "Invalid file")
+
 class ParticipantsView(generics.GenericAPIView):
     serializer_class = ParticipantSerializer
     permission_classes = [IsAuthenticated]

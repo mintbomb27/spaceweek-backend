@@ -23,11 +23,14 @@ class Event(models.Model):
     date = models.DateField()
     time = models.TimeField()
     max_per_school = models.IntegerField(default=5)
+    max_per_team = models.IntegerField(default=4)
     type = models.CharField(max_length = 11, choices=[("Individual", "Individual"), ("Team", "Team")])
     eligible_genders = ArrayField(
             models.CharField(max_length=10, choices=[("Male", "Male"), ("Female", "Female")]),
             size=2
         )
+    excel_upload = models.BooleanField(default=False)
+    file_submission = models.BooleanField(default=False)
     deadline = models.DateTimeField(null=True)
 
     def __str__(self):
@@ -55,3 +58,10 @@ class Participant(models.Model):
 
     def __str__(self) -> str:
         return self.event.name+':'+ self.name
+
+class Team(models.Model):
+    id = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=128,unique=True)
+    participants = models.ManyToManyField(Participant)
+    event = models.ForeignKey(Event,on_delete= models.CASCADE)
+    school = models.ForeignKey(School,on_delete= models.CASCADE)
