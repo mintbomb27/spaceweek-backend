@@ -192,14 +192,18 @@ class TeamView(generics.GenericAPIView):
                                     team.participants.add(part)
                                 team.save()
                             else:
+                                delete = default_storage.delete(dirr)
                                 raise Exception(400, f"Team already has {len(team.participants)}. Cannot add {len(teams[team_name])} more.")
                         else:
+                            delete = default_storage.delete(dirr)
                             raise Exception(400, f"Team {team.name} already has {event.max_per_team} members")
                     else:
+                        delete = default_storage.delete(dirr)
                         raise Exception(400, f"Team already exists under a different school.")
                 except Team.DoesNotExist:
                     final_parts += teams[team_name]
                     if(len(teams[team_name]) > event.max_per_team):
+                        delete = default_storage.delete(dirr)
                         raise Exception(400, f"Team `{team_name}` has more than {event.max_per_team} participants.")
                     team = Team(name=team_name, event=event, school=school)
                     team.save()
