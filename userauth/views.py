@@ -81,9 +81,9 @@ class CustomRegisterView(generics.GenericAPIView):
         contact = request.data.get('contact', None)
         password = request.data.get('password', None)
         name = request.data.get('name', None)
-        if(school_name is None):
+        if(not(school_name and school_name.strip())):
             raise Exception(400, "School Name not provided")
-        if(school_address is None):
+        if(not(school_address and school_address.strip())):
             raise Exception(400, "School Address not provided")
         try:
             school = School.objects.get(name=school_name)
